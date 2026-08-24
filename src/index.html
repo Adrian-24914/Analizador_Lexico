@@ -1,0 +1,55 @@
+<!-- index.html -->
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+        />
+        <title>Regex a AFN</title>
+    </head>
+
+    <body>
+        <main class="container">
+        <h1>Conversión de expresión regular a AFN</h1>
+
+        <form id="regex-form">
+            <label for="regex-input">
+            Expresión regular
+            </label>
+
+            <div class="controls">
+            <input
+                id="regex-input"
+                value="a(b|c)*"
+                autocomplete="off"
+            />
+
+            <button type="submit">
+                Convertir
+            </button>
+            </div>
+        </form>
+
+        <section class="result">
+            <p>
+            Concatenación explícita:
+            <code id="formatted-output"></code>
+            </p>
+
+            <p>
+            Expresión postfija:
+            <code id="postfix-output"></code>
+            </p>
+
+            <p id="error-output" role="alert"></p>
+        </section>
+
+        <div id="nfa-container"></div>
+        </main>
+
+        <script type="module" src="/main.ts"></script>
+    </body>
+</html>
