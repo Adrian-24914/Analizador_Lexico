@@ -1,14 +1,49 @@
 import { readFile } from 'fs/promises'
 
-/**
- * Lee un archivo de texto y devuelve cada línea limpia sin espacios en los extremos.
- */
-export async function readLines(filePath: string): Promise<string[]> {
-    const content = await readFile(filePath, 'utf-8');
-    
-    return content
-        .replace(/\r\n/g, '\n')
+export interface InputCase {
+    regex: string
+    value: string
+    line: number
+}
+
+export function parseLines(content: string): string[] {
+    const lines = content
+        .replace(/^\uFEFF/, '')
+        .replace(/\r\n?/g, '\n')
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
+
+    // El salto de línea final cierra la última entrada; no crea otra.
+    if (lines.at(-1) === '') {
+        lines.pop()
+    }
+
+    return lines.map(line => line.trim())
+}
+
+export function pairInputs(regexLines: string[], stringLines: string[]): InputCase[] {
+    if (regexLines.length !== stringLines.length) {
+        throw new Error(
+            `regex.txt tiene ${regexLines.length} líneas y strings.txt tiene ${stringLines.length}`,
+        )
+    }
+
+    return regexLines.map((regex, index) => {
+        if (!regex) {
+            throw new Error(`La expresión regular de la línea ${index + 1} está vacía`)
+        }
+
+        return { regex, value: stringLines[index]!, line: index + 1 }
+    })
+}
+
+export async function readInputCases(
+    regexPath = 'regex.txt',
+    stringsPath = 'strings.txt',
+): Promise<InputCase[]> {
+    const [regexContent, stringsContent] = await Promise.all([
+        readFile(regexPath, 'utf-8'),
+        readFile(stringsPath, 'utf-8'),
+    ])
+
+    return pairInputs(parseLines(regexContent), parseLines(stringsContent))
 }
