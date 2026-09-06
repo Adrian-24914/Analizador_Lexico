@@ -10,6 +10,26 @@ body {
     margin: 32px auto;
 }
 
+.view-switcher {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.view-switcher button {
+    padding: 10px 16px;
+    border: 1px solid #ffffff;
+    border-radius: 8px;
+    color: #ffffff;
+    background: transparent;
+    cursor: pointer;
+}
+
+.view-switcher button[aria-pressed="true"] {
+    color: #131313;
+    background: #ffffff;
+}
+
 .file-results {
     display: grid;
     gap: 20px;
@@ -18,6 +38,7 @@ body {
 .case-card {
     min-width: 0;
     padding: 20px;
+    color: #131313;
     border: 1px solid white;
     border-left: 6px solid #64748b;
     border-radius: 8px;
