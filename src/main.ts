@@ -6,10 +6,8 @@ import { renderDFA, renderNFA } from './drawing';
 import { nfaToDFA } from './5-subsets';
 import { minimizeDFA } from './6-minimization';
 
-// Selector de elementos del DOM por ID con tipado genérico
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-// Procesamiento de la expresión regular: validación, conversión a notación explícita, postfix, NFA, DFA y DFA minimizado
 function processRegex(rawRegex: string) {
     const regex = rawRegex.trim();
     if (!regex || !isBalanced(regex)) {
@@ -25,7 +23,6 @@ function processRegex(rawRegex: string) {
     return { regex, explicit, postfix, nfa, dfa, minDfa };
 }
 
-// Renderizado para NFA, DFA y DFA minimizado en contenedores específicos del DOM
 async function renderGraphs(
     { nfa, dfa, minDfa }: Pick<ReturnType<typeof processRegex>, 'nfa' | 'dfa' | 'minDfa'>,
     targets: { nfa: HTMLElement; dfa: HTMLElement; minDfa: HTMLElement }
@@ -35,7 +32,7 @@ async function renderGraphs(
     await renderDFA(minDfa, targets.minDfa);
 }
 
-// 3. Pestañas: alternar entre vista manual y vista por archivo
+// Control de vistas (Pestañas)
 function setFileView(showFile: boolean): void {
     $('manual-view').hidden = showFile;
     $('file-view').hidden = !showFile;
@@ -46,14 +43,19 @@ function setFileView(showFile: boolean): void {
 $('manual-view-button').onclick = () => setFileView(false);
 $('file-view-button').onclick = () => setFileView(true);
 
-// Vista manual (Infix expression)
+// Vista manual
 async function drawManual(): Promise<void> {
     const errorEl = $('error-output');
     errorEl.textContent = '';
 
+    const input = $('regex-input') as HTMLInputElement;
+    const value = input.value.trim();
+
+    // Evita error visual si el input arranca vacío
+    if (!value) return;
+
     try {
-        const input = $('regex-input') as HTMLInputElement;
-        const result = processRegex(input.value);
+        const result = processRegex(value);
 
         $('formatted-output').textContent = result.explicit;
         $('postfix-output').textContent = result.postfix;
@@ -75,12 +77,12 @@ $('regex-form').onsubmit = (event) => {
 
 void drawManual();
 
-// Vista por archivo (Automatons from regex.txt)
+// Vista por archivo
 async function drawFileResults(): Promise<void> {
     const container = $('file-results');
 
     try {
-        const response = await fetch('/api/regexes');
+        const response = await fetch('/api/inputs');
         const data = await response.json();
 
         if (!response.ok || !Array.isArray(data)) {
@@ -95,28 +97,28 @@ async function drawFileResults(): Promise<void> {
             try {
                 const result = processRegex(item.regex);
 
+                // Estructura exacta a la de manual-view:
+                // Título blanco -> Contenedor blanco (.nfa-graph / .dfa-graph)
                 card.innerHTML = `
-                    <h3>Line ${item.line}: <code>${result.regex}</code></h3>
-                    <p><strong>Postfix:</strong> <code>${result.postfix}</code></p>
-                    <p><strong>DFA States:</strong> ${result.dfa.states.length} | <strong>Minimized:</strong> ${result.minDfa.states.length}</p>
-                    
-                    <div class="graphs-wrapper">
-                        <h4>NFA (Thompson)</h4>
-                        <div class="nfa-graph" role="img" aria-label="NFA of ${result.regex}"></div>
+                    <h2 class="case-title">Infix Regular Expression: <code>${result.regex}</code></h2>
+                    <h2 class="case-title">Postfix expression: <code>${result.postfix}</code> </h2>
+                    <h2 class="case-title">String to evaluate: <code>${item.value}</code></h2>
 
-                        <h4>DFA (Subsets)</h4>
-                        <div class="dfa-graph" role="img" aria-label="DFA of ${result.regex}"></div>
+                    <h3>NFA (Thompson algorithm)</h3>
+                    <div class="nfa-graph" role="img" aria-label="NFA of ${result.regex}"></div>
 
-                        <h4>DFA (Minimized)</h4>
-                        <div class="dfa-graph" role="img" aria-label="Minimized DFA of ${result.regex}"></div>
-                    </div>
+                    <h3>DFA (subset construction algorithm)</h3>
+                    <div class="dfa-graph" role="img" aria-label="DFA of ${result.regex}"></div>
+
+                    <h3>DFA (partitioning algorithm)</h3>
+                    <div class="dfa-graph" role="img" aria-label="Minimized DFA of ${result.regex}"></div>
                 `;
 
-                const [nfaEl, dfaEl, minDfaEl] = card.querySelectorAll<HTMLElement>('.graphs-wrapper > div');
+                const [nfaEl, dfaEl, minDfaEl] = card.querySelectorAll<HTMLElement>('.nfa-graph, .dfa-graph');
                 await renderGraphs(result, { nfa: nfaEl, dfa: dfaEl, minDfa: minDfaEl });
             } catch (err) {
                 card.className = 'case-card invalid';
-                card.innerHTML = `<h3>Line ${item.line}</h3><p class="error">Error: ${err instanceof Error ? err.message : 'Unknown'}</p>`;
+                card.innerHTML = `<p class="error">Line ${item.line}: ${err instanceof Error ? err.message : 'Unknown error'}</p>`;
             }
         }
     } catch (err) {
