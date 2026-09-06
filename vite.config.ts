@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import { readInputCases } from './src/reader.ts'
+import { readInputCases } from './src/1-reader.ts'
 
 export default defineConfig({
     root: 'src',

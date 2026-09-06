@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { pairInputs, parseLines } from './reader'
+import { pairInputs, parseLines } from '../src/1-reader'
 
 describe('lector de entradas', () => {
     it('acepta saltos de línea de Windows, Unix y un BOM', () => {

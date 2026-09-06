@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { simulateNFA } from './nfa-simulator'
-import { regexToPostfix } from './shunting-yard'
-import { postfixToNFA } from './thompson'
+import { simulateNFA } from '../src/nfa-simulator'
+import { regexToPostfix } from '../src/3-shunting-yard'
+import { postfixToNFA } from '../src/4-thompson'
 
 function accepts(regex: string, value: string): boolean {
     return simulateNFA(postfixToNFA(regexToPostfix(regex)), value)

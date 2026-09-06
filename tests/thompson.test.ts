@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { regexToPostfix } from './shunting-yard'
-import { postfixToNFA } from './thompson'
+import { regexToPostfix } from '../src/3-shunting-yard'
+import { postfixToNFA } from '../src/4-thompson'
 
 describe('construcción de Thompson', () => {
     it('numera siempre el estado inicial como q0', () => {

@@ -8,5 +8,5 @@
         "strict": true,
         "skipLibCheck": true
     },
-    "include": ["src/**/*", "vite.config.ts"]
+    "include": ["src/**/*", "vite.config.ts", "tests/thompson.test.ts", "tests/reader.test.ts", "tests/nfa-simulator.test.ts"]
 }

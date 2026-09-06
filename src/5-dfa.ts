@@ -1,7 +1,7 @@
 import type { ElementDefinition, Core } from 'cytoscape'
 import cytoscape from 'cytoscape'
 
-import type { NFA, State } from './thompson'
+import type { NFA, State } from './4-thompson'
 
 export interface DFAState {
     id: number

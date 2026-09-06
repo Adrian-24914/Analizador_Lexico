@@ -1,7 +1,7 @@
 import type { ElementDefinition,  Core } from 'cytoscape';
 import cytoscape from 'cytoscape';
 
-import { NFA, EPSILON} from './thompson';
+import { NFA, EPSILON} from './4-thompson';
 
 export function nfaToCytoscapeElements(
     nfa: NFA,

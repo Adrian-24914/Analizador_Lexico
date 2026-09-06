@@ -1,4 +1,4 @@
-import type { NFA, State } from './thompson'
+import type { NFA, State } from './4-thompson'
 
 function epsilonClosure(initialStates: State[]): Set<State> {
     const closure = new Set(initialStates)

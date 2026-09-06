@@ -1,12 +1,12 @@
 import './styles.css';
 import type { Core } from 'cytoscape';
 import { simulateNFA } from './nfa-simulator';
-import type { InputCase } from './reader';
-import { isBalanced } from './validator';
-import { insertExplicitConcat, regexToPostfix } from './shunting-yard';
-import { postfixToNFA } from './thompson';
+import type { InputCase } from './1-reader';
+import { isBalanced } from './2-validator';
+import { insertExplicitConcat, regexToPostfix } from './3-shunting-yard';
+import { postfixToNFA } from './4-thompson';
 import { renderNFA } from './cytoscape';
-import { subsetConstruction, simulateDFA, renderDFA, renderDFALegend } from './dfa';
+import { subsetConstruction, simulateDFA, renderDFA, renderDFALegend } from './5-dfa';
 
 const form = document.querySelector<HTMLFormElement>('#regex-form')!;
 const input = document.querySelector<HTMLInputElement>('#regex-input')!;
