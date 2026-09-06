@@ -207,6 +207,9 @@ importers:
 
   .:
     dependencies:
+      '@viz-js/viz':
+        specifier: ^3.30.0
+        version: 3.30.0
       cytoscape:
         specifier: ^3.34.1
         version: 3.34.1
@@ -607,6 +610,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@viz-js/viz@3.30.0':
+    resolution: {integrity: sha512-2zmcP55QY44uQfZ+GvgNHmGd8S6KUD+2eMur9AbYybSzrOd/m8nMUg0ZircJNiJRKGgVBKAE8kh0hAwpUFUFQQ==}
+
   cytoscape@3.34.1:
     resolution: {integrity: sha512-Lr0RvH9H75y9ar8h9Toy6u4lxRSCcxUq+hHcQ26sVWo6BnaQp1gwEZOYqwuYTZhyW7npyKnNLP8oJ2p1/3OZ7g==}
     engines: {node: '>=0.10'}
@@ -985,6 +991,8 @@ snapshots:
 
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
+
+  '@viz-js/viz@3.30.0': {}
 
   cytoscape@3.34.1: {}
 

@@ -1,4 +1,7 @@
 (a|b)*abb
 (0|1)+00
 a(b|c)*
-(a|b*abb
+(a|b*abb)
+aaab
+asdasd
+ab.

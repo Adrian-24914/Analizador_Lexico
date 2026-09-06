@@ -1,7 +1,4 @@
 
-export const EPSILON = '☻'
-
-
 // Represetación de la transicion 
 // de un estado a otro con un simbolo
 export interface Transition {

@@ -5,7 +5,7 @@ import type { InputCase } from './1-reader';
 import { isBalanced } from './2-validator';
 import { insertExplicitConcat, regexToPostfix } from './3-shunting-yard';
 import { postfixToNFA } from './4-thompson';
-import { renderNFA } from './cytoscape';
+import { renderNFA } from './drawing';
 import { subsetConstruction, simulateDFA, renderDFA, renderDFALegend } from './5-dfa';
 
 const form = document.querySelector<HTMLFormElement>('#regex-form')!;
@@ -18,10 +18,9 @@ const dfaContainer = document.querySelector<HTMLElement>('#dfa-container')!;
 const dfaLegend = document.querySelector<HTMLElement>('#dfa-legend')!;
 const fileResults = document.querySelector<HTMLElement>('#file-results')!;
 
-let graph: Core | undefined;
 let dfaGraph: Core | undefined;
 
-function draw(): void {
+async function draw(): Promise<void> {
     error.textContent = '';
 
     try {
@@ -39,8 +38,7 @@ function draw(): void {
 
         const nfa = postfixToNFA(postfix);
 
-        graph?.destroy();
-        graph = renderNFA(nfa, container);
+        await renderNFA(nfa, container);
 
         dfaGraph?.destroy();
         const dfa = subsetConstruction(nfa);
@@ -54,10 +52,10 @@ function draw(): void {
 
 form.addEventListener('submit', event => {
     event.preventDefault();
-    draw();
+    void draw();
 });
 
-draw();
+void draw();
 
 function addDetail(parent: HTMLElement, label: string, value: string): void {
     const detail = document.createElement('p');
@@ -110,17 +108,19 @@ async function drawFileResults(): Promise<void> {
                 nfaLabel.textContent = 'AFN:';
                 graphsWrapper.append(nfaLabel);
 
-                const graphContainer = document.createElement('div');
-                graphContainer.className = 'nfa-graph';
-                graphsWrapper.append(graphContainer);
-                renderNFA(nfa, graphContainer);
+                const nfaGraphContainer = document.createElement('div');
+                nfaGraphContainer.className = 'nfa-graph';
+                nfaGraphContainer.role = 'img';
+                nfaGraphContainer.ariaLabel = `AFN de ${inputCase.regex}`;
+                graphsWrapper.append(nfaGraphContainer);
+                await renderNFA(nfa, nfaGraphContainer);
 
                 const dfaLabel = document.createElement('p');
                 dfaLabel.textContent = 'AFD:';
                 graphsWrapper.append(dfaLabel);
 
                 const dfaGraphContainer = document.createElement('div');
-                dfaGraphContainer.className = 'nfa-graph';
+                dfaGraphContainer.className = 'dfa-graph';
                 graphsWrapper.append(dfaGraphContainer);
                 renderDFA(dfa, dfaGraphContainer);
 
