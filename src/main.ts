@@ -6,6 +6,7 @@ import { isBalanced } from './validator';
 import { insertExplicitConcat, regexToPostfix } from './shunting-yard';
 import { postfixToNFA } from './thompson';
 import { renderNFA } from './cytoscape';
+import { subsetConstruction, simulateDFA, renderDFA, renderDFALegend } from './dfa';
 
 const form = document.querySelector<HTMLFormElement>('#regex-form')!;
 const input = document.querySelector<HTMLInputElement>('#regex-input')!;
@@ -13,9 +14,12 @@ const formatted = document.querySelector('#formatted-output')!;
 const postfixOutput = document.querySelector('#postfix-output')!;
 const error = document.querySelector('#error-output')!;
 const container = document.querySelector<HTMLElement>('#nfa-container')!;
+const dfaContainer = document.querySelector<HTMLElement>('#dfa-container')!;
+const dfaLegend = document.querySelector<HTMLElement>('#dfa-legend')!;
 const fileResults = document.querySelector<HTMLElement>('#file-results')!;
 
 let graph: Core | undefined;
+let dfaGraph: Core | undefined;
 
 function draw(): void {
     error.textContent = '';
@@ -33,8 +37,15 @@ function draw(): void {
         formatted.textContent = explicit;
         postfixOutput.textContent = postfix;
 
+        const nfa = postfixToNFA(postfix);
+
         graph?.destroy();
-        graph = renderNFA(postfixToNFA(postfix), container);
+        graph = renderNFA(nfa, container);
+
+        dfaGraph?.destroy();
+        const dfa = subsetConstruction(nfa);
+        dfaGraph = renderDFA(dfa, dfaContainer);
+        renderDFALegend(dfa, dfaLegend);
     } catch (cause) {
         error.textContent =
         cause instanceof Error ? cause.message : 'No se pudo construir el AFN';
@@ -75,19 +86,47 @@ async function drawFileResults(): Promise<void> {
 
                 const postfix = regexToPostfix(inputCase.regex);
                 const nfa = postfixToNFA(postfix);
+                const dfa = subsetConstruction(nfa);
                 const value = inputCase.value === 'ε' ? '' : inputCase.value;
                 const accepted = simulateNFA(nfa, value);
+                const acceptedDFA = simulateDFA(dfa, value);
 
                 card.classList.add(accepted ? 'accepted' : 'rejected');
                 card.innerHTML = `<h3>Línea ${inputCase.line}: ${accepted ? 'sí' : 'no'}</h3>`;
                 addDetail(card, 'Regex', inputCase.regex);
                 addDetail(card, 'Cadena', inputCase.value || 'ε');
                 addDetail(card, 'Postfix', postfix);
+                addDetail(card, 'Estados AFD', String(dfa.states.length));
+
+                if (acceptedDFA !== accepted) {
+                    addDetail(card, 'Advertencia', 'el AFD no coincide con el AFN');
+                }
+
+                const graphsWrapper = document.createElement('div');
+                graphsWrapper.className = 'graphs-wrapper';
+                card.append(graphsWrapper);
+
+                const nfaLabel = document.createElement('p');
+                nfaLabel.textContent = 'AFN:';
+                graphsWrapper.append(nfaLabel);
 
                 const graphContainer = document.createElement('div');
                 graphContainer.className = 'nfa-graph';
-                card.append(graphContainer);
+                graphsWrapper.append(graphContainer);
                 renderNFA(nfa, graphContainer);
+
+                const dfaLabel = document.createElement('p');
+                dfaLabel.textContent = 'AFD:';
+                graphsWrapper.append(dfaLabel);
+
+                const dfaGraphContainer = document.createElement('div');
+                dfaGraphContainer.className = 'nfa-graph';
+                graphsWrapper.append(dfaGraphContainer);
+                renderDFA(dfa, dfaGraphContainer);
+
+                const dfaLegendContainer = document.createElement('div');
+                graphsWrapper.append(dfaLegendContainer);
+                renderDFALegend(dfa, dfaLegendContainer);
             } catch (cause) {
                 const message = cause instanceof Error ? cause.message : 'error desconocido';
                 card.classList.add('invalid');
