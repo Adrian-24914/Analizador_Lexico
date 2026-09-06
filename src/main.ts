@@ -1,12 +1,11 @@
 import './styles.css';
-import type { Core } from 'cytoscape';
 import { simulateNFA } from './nfa-simulator';
 import type { InputCase } from './1-reader';
 import { isBalanced } from './2-validator';
 import { insertExplicitConcat, regexToPostfix } from './3-shunting-yard';
 import { postfixToNFA } from './4-thompson';
-import { renderNFA } from './drawing';
-import { subsetConstruction, simulateDFA, renderDFA, renderDFALegend } from './5-dfa';
+import { renderDFA, renderNFA } from './drawing';
+import { nfaToDFA, simulateDFA, renderDFALegend } from './5-subsets';
 
 const form = document.querySelector<HTMLFormElement>('#regex-form')!;
 const input = document.querySelector<HTMLInputElement>('#regex-input')!;
@@ -17,8 +16,6 @@ const container = document.querySelector<HTMLElement>('#nfa-container')!;
 const dfaContainer = document.querySelector<HTMLElement>('#dfa-container')!;
 const dfaLegend = document.querySelector<HTMLElement>('#dfa-legend')!;
 const fileResults = document.querySelector<HTMLElement>('#file-results')!;
-
-let dfaGraph: Core | undefined;
 
 async function draw(): Promise<void> {
     error.textContent = '';
@@ -40,9 +37,8 @@ async function draw(): Promise<void> {
 
         await renderNFA(nfa, container);
 
-        dfaGraph?.destroy();
-        const dfa = subsetConstruction(nfa);
-        dfaGraph = renderDFA(dfa, dfaContainer);
+        const dfa = nfaToDFA(nfa);
+        await renderDFA(dfa, dfaContainer);
         renderDFALegend(dfa, dfaLegend);
     } catch (cause) {
         error.textContent =
@@ -84,7 +80,7 @@ async function drawFileResults(): Promise<void> {
 
                 const postfix = regexToPostfix(inputCase.regex);
                 const nfa = postfixToNFA(postfix);
-                const dfa = subsetConstruction(nfa);
+                const dfa = nfaToDFA(nfa);
                 const value = inputCase.value === 'ε' ? '' : inputCase.value;
                 const accepted = simulateNFA(nfa, value);
                 const acceptedDFA = simulateDFA(dfa, value);
@@ -121,8 +117,10 @@ async function drawFileResults(): Promise<void> {
 
                 const dfaGraphContainer = document.createElement('div');
                 dfaGraphContainer.className = 'dfa-graph';
+                dfaGraphContainer.role = 'img';
+                dfaGraphContainer.ariaLabel = `AFD de ${inputCase.regex}`;
                 graphsWrapper.append(dfaGraphContainer);
-                renderDFA(dfa, dfaGraphContainer);
+                await renderDFA(dfa, dfaGraphContainer);
 
                 const dfaLegendContainer = document.createElement('div');
                 graphsWrapper.append(dfaLegendContainer);
