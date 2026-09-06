@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { simulateNFA } from '../src/nfa-simulator'
+import { evaluateDFA, evaluateNFA } from '../src/7-simulation'
 import { regexToPostfix } from '../src/3-shunting-yard'
 import { postfixToNFA } from '../src/4-thompson'
+import { nfaToDFA } from '../src/5-subsets'
 
 function accepts(regex: string, value: string): boolean {
-    return simulateNFA(postfixToNFA(regexToPostfix(regex)), value)
+    return evaluateNFA(postfixToNFA(regexToPostfix(regex)), value).accepted
 }
 
 describe('simulación del AFN', () => {
@@ -19,5 +20,12 @@ describe('simulación del AFN', () => {
 
     it('acepta la cadena vacía cuando la expresión lo permite', () => {
         assert.equal(accepts('a*', ''), true)
+    })
+
+    it('registra cada paso del AFN y del AFD', () => {
+        const nfa = postfixToNFA(regexToPostfix('ab'))
+
+        assert.deepEqual(evaluateNFA(nfa, 'ab').steps.map(step => step.symbol), [null, 'a', 'b'])
+        assert.deepEqual(evaluateDFA(nfaToDFA(nfa), 'ab').steps.map(step => step.symbol), ['a', 'b'])
     })
 })

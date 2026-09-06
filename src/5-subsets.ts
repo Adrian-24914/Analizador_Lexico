@@ -26,7 +26,7 @@ function getAlphabet(nfa: NFA): string[] {
 }
 
 // Clausura-épsilon: estados alcanzables por aristas null
-function getEpsilonClosure(states: State[]): State[] {
+export function getEpsilonClosure(states: State[]): State[] {
     const stack = [...states];
     const visited = new Set<number>(states.map(s => s.id));
     const result = [...states];

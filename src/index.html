@@ -31,8 +31,15 @@
             <div class="controls">
             <input
                 id="regex-input"
-                value="a"
+                value="abb"
                 placeholder="Infix expression"
+                autocomplete="off"
+            />
+
+            <input
+                id="string-input"
+                value=""
+                placeholder="String to evaluate (ε = empty)"
                 autocomplete="off"
             />
 
@@ -62,13 +69,12 @@
         <h3> DFA (subset construction algorithm)</h3>
         <div id="dfa-container" class="dfa-graph" role="img" aria-label="DFA of the regular expression"></div>
 
-        <h3> DFA (partitioning algorithm)</h3>
+        <h3> DFA Minimized (partitioning algorithm)</h3>
         <div id="minimized-dfa-container" class="dfa-graph" role="img" aria-label="DFA of the regular expression"></div>
         </section>
 
         <section id="file-view" aria-labelledby="file-view-title" hidden>
             <h2 id="file-view-title">Automatons from a regex.txt file</h2>
-            <p>Every line generates a corresponding automaton.</p>
             <div id="file-results" class="file-results"></div>
         </section>
         </main>
