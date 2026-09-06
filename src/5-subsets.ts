@@ -123,23 +123,3 @@ export function simulateDFA(dfa: DFA, value: string): boolean {
 
     return current.isAccept;
 }
-
-export function renderDFALegend(dfa: DFA, container: HTMLElement): void {
-    const list = document.createElement('ul');
-    list.className = 'dfa-legend';
-
-    for (const state of dfa.states) {
-        const item = document.createElement('li');
-        const marks = [
-            state === dfa.start ? 'inicial' : null,
-            state.isAccept ? 'aceptación' : null,
-        ].filter(Boolean);
-        const subset = state.nfaStates.map(s => `q${s.id}`).join(',');
-
-        item.textContent = `D${state.id} = {${subset}}`
-            + (marks.length ? ` (${marks.join(', ')})` : '');
-        list.append(item);
-    }
-
-    container.replaceChildren(list);
-}

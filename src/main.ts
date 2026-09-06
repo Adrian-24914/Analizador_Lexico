@@ -5,7 +5,8 @@ import { isBalanced } from './2-validator';
 import { insertExplicitConcat, regexToPostfix } from './3-shunting-yard';
 import { postfixToNFA } from './4-thompson';
 import { renderDFA, renderNFA } from './drawing';
-import { nfaToDFA, simulateDFA, renderDFALegend } from './5-subsets';
+import { nfaToDFA, simulateDFA } from './5-subsets';
+import { minimizeDFA } from './6-minimization';
 
 const form = document.querySelector<HTMLFormElement>('#regex-form')!;
 const input = document.querySelector<HTMLInputElement>('#regex-input')!;
@@ -14,7 +15,7 @@ const postfixOutput = document.querySelector('#postfix-output')!;
 const error = document.querySelector('#error-output')!;
 const container = document.querySelector<HTMLElement>('#nfa-container')!;
 const dfaContainer = document.querySelector<HTMLElement>('#dfa-container')!;
-const dfaLegend = document.querySelector<HTMLElement>('#dfa-legend')!;
+const minimizedDfaContainer = document.querySelector<HTMLElement>('#minimized-dfa-container')!;
 const fileResults = document.querySelector<HTMLElement>('#file-results')!;
 
 async function draw(): Promise<void> {
@@ -39,7 +40,7 @@ async function draw(): Promise<void> {
 
         const dfa = nfaToDFA(nfa);
         await renderDFA(dfa, dfaContainer);
-        renderDFALegend(dfa, dfaLegend);
+        await renderDFA(minimizeDFA(dfa), minimizedDfaContainer);
     } catch (cause) {
         error.textContent =
         cause instanceof Error ? cause.message : 'No se pudo construir el AFN';
@@ -91,6 +92,8 @@ async function drawFileResults(): Promise<void> {
                 addDetail(card, 'Cadena', inputCase.value || 'ε');
                 addDetail(card, 'Postfix', postfix);
                 addDetail(card, 'Estados AFD', String(dfa.states.length));
+                const minimizedDfa = minimizeDFA(dfa);
+                addDetail(card, 'Estados AFD minimizado', String(minimizedDfa.states.length));
 
                 if (acceptedDFA !== accepted) {
                     addDetail(card, 'Advertencia', 'el AFD no coincide con el AFN');
@@ -122,9 +125,16 @@ async function drawFileResults(): Promise<void> {
                 graphsWrapper.append(dfaGraphContainer);
                 await renderDFA(dfa, dfaGraphContainer);
 
-                const dfaLegendContainer = document.createElement('div');
-                graphsWrapper.append(dfaLegendContainer);
-                renderDFALegend(dfa, dfaLegendContainer);
+                const minimizedLabel = document.createElement('p');
+                minimizedLabel.textContent = 'AFD minimizado:';
+                graphsWrapper.append(minimizedLabel);
+
+                const minimizedGraphContainer = document.createElement('div');
+                minimizedGraphContainer.className = 'dfa-graph';
+                minimizedGraphContainer.role = 'img';
+                minimizedGraphContainer.ariaLabel = `AFD minimizado de ${inputCase.regex}`;
+                graphsWrapper.append(minimizedGraphContainer);
+                await renderDFA(minimizedDfa, minimizedGraphContainer);
             } catch (cause) {
                 const message = cause instanceof Error ? cause.message : 'error desconocido';
                 card.classList.add('invalid');
