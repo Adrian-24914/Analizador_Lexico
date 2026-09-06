@@ -1,22 +1,31 @@
 
 export const EPSILON = '☻'
 
+
+// Represetación de la transicion 
+// de un estado a otro con un simbolo
 export interface Transition {
     symbol: string | null
     to: State
 }
 
+// Represetación de un estado en el AFN
+// con un id unico y una lista de transiciones
 export interface State {
     id: number
     transitions: Transition[]
 }
 
+// Represetación de un AFN con un estado inicial, 
+// un estado de aceptación y una lista de estados
 export interface NFA {
     start: State
     accept: State
     states: State[]
 }
 
+// Represetación de un fragmento de AFN con un estado 
+// inicial y un estado de aceptación
 interface Fragment {
     start: State
     accept: State
@@ -66,7 +75,8 @@ export function postfixToNFA(postfix: string): NFA {
         from.transitions.push({ symbol, to });
     }
 
-    // FUNCIÓN AUXILIAR: Saca un fragmento de la pila y lanza un error si la pila está vacía
+    // FUNCIÓN AUXILIAR: Saca un fragmento de la pila 
+    // y lanza un error si la pila está vacía.
     const popFragment = (): Fragment => {
         const fragment = fragments.pop();
 
