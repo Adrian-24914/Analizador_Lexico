@@ -72,7 +72,7 @@ export function renderNFA(
     nfa: NFA,
     container: HTMLElement,
 ): Core {
-    return cytoscape({
+    const graph = cytoscape({
         container,
 
         elements: nfaToCytoscapeElements(nfa),
@@ -167,17 +167,32 @@ export function renderNFA(
         ],
 
         layout: {
+            name: 'preset',
+        },
+
+        minZoom: 0.3,
+        maxZoom: 3,
+    });
+
+    graph.elements()
+        .not('#initial-arrow, #initial-edge')
+        .layout({
             name: 'breadthfirst',
             directed: true,
-            roots: ['#initial-arrow'],
+            roots: [`q${nfa.start.id}`],
             circle: false,
             spacingFactor: 1.5,
-            padding: 30,
-            },
+        })
+        .run();
 
-            minZoom: 0.3,
-            maxZoom: 3,
+    const startPosition = graph.getElementById(`q${nfa.start.id}`).position();
+    graph.getElementById('initial-arrow').position({
+        x: startPosition.x - 80,
+        y: startPosition.y,
     });
+    graph.fit(graph.elements(), 30);
+
+    return graph;
 }
 
 

@@ -22,9 +22,28 @@ interface Fragment {
     accept: State
 }
 
+function renumberFromStart(start: State): State[] {
+    const orderedStates = [start]
+    const visited = new Set(orderedStates)
+
+    for (let index = 0; index < orderedStates.length; index++) {
+        for (const transition of orderedStates[index]!.transitions) {
+            if (!visited.has(transition.to)) {
+                visited.add(transition.to)
+                orderedStates.push(transition.to)
+            }
+        }
+    }
+
+    orderedStates.forEach((state, index) => {
+        state.id = index
+    })
+
+    return orderedStates
+}
+
 export function postfixToNFA(postfix: string): NFA {
     const fragments: Fragment[] = []
-    const states: State[] = []
 
     let nextId = 0
 
@@ -35,7 +54,6 @@ export function postfixToNFA(postfix: string): NFA {
         transitions: [],
         }
 
-        states.push(state);
         return state;
     }
 
@@ -158,6 +176,6 @@ export function postfixToNFA(postfix: string): NFA {
     return {
         start: result.start,
         accept: result.accept,
-        states,
+        states: renumberFromStart(result.start),
     }
 }
