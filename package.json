@@ -5,7 +5,8 @@
   "main": "src/main.ts",
   "type": "module",
   "scripts": {
-    "start": "vite src",
+    "start": "vite",
+    "dev": "vite",
     "test": "tsx --test src/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

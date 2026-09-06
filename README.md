@@ -1,35 +1,45 @@
-# Laboratorio 4 - AFN de Thompson
+# Analizador de expresiones regulares
 
-El programa convierte cada expresión regular de `expresiones.txt` a postfix,
-construye su árbol sintáctico, aplica el algoritmo de Thompson y simula una
-cadena `w`. También abre una ventana desplazable con cada AFN y guarda una
-imagen SVG en `grafos/`.
+El programa lee expresiones regulares desde `regex.txt` y cadenas desde
+`strings.txt`. Cada expresión se relaciona con la cadena ubicada en el mismo
+número de línea.
 
+Actualmente, cada caso pasa por este flujo:
 
-El código está separado por responsabilidad: `thompson.py` contiene la
-construcción y simulación, `visualizacion_afn.py` genera SVG/Tkinter y
-`entrada_afn.py` procesa los archivos de entrada.
+1. Conversión de notación infix a postfix.
+2. Construcción del AFN mediante Thompson.
+3. Simulación de la cadena en el AFN.
+
+Una expresión inválida se reporta con su número de línea y no detiene el
+procesamiento de los demás casos.
+
+Los resultados y el grafo de cada AFN se muestran en la página web.
+
+## Archivos de entrada
+
+Ambos archivos deben tener la misma cantidad de líneas. Se utiliza `ε` en
+`strings.txt` para representar la cadena vacía.
+
+```text
+regex.txt       strings.txt
+(a|b)*abb       aabb
+a*              ε
+```
 
 ## Ejecución
 
 ```powershell
-python thompson.py
+pnpm install
+pnpm start
 ```
 
-Para ejecutar sin interfaz gráfica:
+Después, abra `http://localhost:5173/` en el navegador.
+
+Las pruebas y la verificación de tipos se ejecutan con:
 
 ```powershell
-python thompson.py --sin-gui
+pnpm test
+pnpm typecheck
 ```
 
-`cadenas.txt` contiene una cadena por cada expresión no comentada. También se
-puede proporcionar una misma cadena para todas las expresiones:
-
-```powershell
-python thompson.py --cadena abba
-```
-
-O una cadena por expresión repitiendo `--cadena`. Use `ε` para representar la
-cadena vacía. Las expresiones admiten unión `|`, concatenación implícita,
-cerradura `*`, cerradura positiva `+`, opcional `?`, paréntesis, escapes y clases
-de caracteres.
+La misma página incluye un formulario para probar expresiones manualmente.
