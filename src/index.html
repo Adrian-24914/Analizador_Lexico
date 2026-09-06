@@ -1,77 +1,74 @@
-<!-- index.html -->
-
 <!doctype html>
-<html lang="es">
+<html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
         />
-        <title>Regex a AFN</title>
+        <title>Regex to AFN</title>
     </head>
 
     <body>
         <main class="container">
-        <h1>Conversión de expresión regular a AFN</h1>
+        <h1>Regex to Automaton Converter</h1>
 
-        <nav class="view-switcher" aria-label="Vistas principales">
+
+        <nav class="view-switcher" aria-label="Main views">
             <button id="manual-view-button" type="button" aria-controls="manual-view" aria-pressed="true">
-                Expresión infix
+                Infix expression
             </button>
             <button id="file-view-button" type="button" aria-controls="file-view" aria-pressed="false">
-                Autómatas de regex.txt
+                Automatons from regex.txt
             </button>
         </nav>
 
         <section id="manual-view" aria-labelledby="manual-view-title">
-        <h2 id="manual-view-title">Ingresar expresión regular</h2>
+        <h2 id="manual-view-title">Infix expression</h2>
 
         <form id="regex-form">
-            <label for="regex-input">
-            Expresión regular
-            </label>
 
             <div class="controls">
             <input
                 id="regex-input"
-                value="a(b|c)*"
+                value=""
+                placeholder="Infix expression"
                 autocomplete="off"
             />
 
             <button type="submit">
-                Convertir
+                Convert
             </button>
             </div>
         </form>
 
         <section class="result">
             <p>
-            Concatenación explícita:
+            Explicit concatenation:
             <code id="formatted-output"></code>
             </p>
 
             <p>
-            Expresión postfija:
+            Postfix notation:
             <code id="postfix-output"></code>
             </p>
 
             <p id="error-output" role="alert"></p>
         </section>
 
-        <h3>AFN (Thompson)</h3>
-        <div id="nfa-container" class="nfa-graph" role="img" aria-label="AFN de la expresión regular"></div>
+        <h3> NFA (Thompson algorithm)</h3>
+        <div id="nfa-container" class="nfa-graph" role="img" aria-label="NFA of the regular expression"></div>
 
-        <h3>AFD (construcción por subconjuntos)</h3>
-        <div id="dfa-container" class="dfa-graph" role="img" aria-label="AFD de la expresión regular"></div>
+        <h3> DFA (subset construction algorithm)</h3>
+        <div id="dfa-container" class="dfa-graph" role="img" aria-label="DFA of the regular expression"></div>
 
-        <h3>AFD minimizado</h3>
-        <div id="minimized-dfa-container" class="dfa-graph" role="img" aria-label="AFD minimizado de la expresión regular"></div>
+        <h3> DFA (partitioning algorithm)</h3>
+        <div id="minimized-dfa-container" class="dfa-graph" role="img" aria-label="DFA of the regular expression"></div>
         </section>
 
         <section id="file-view" aria-labelledby="file-view-title" hidden>
-            <h2 id="file-view-title">Autómatas de regex.txt</h2>
-            <p>Se muestran los autómatas generados por cada línea de regex.txt.</p>
+            <h2 id="file-view-title">Automatons from a regex.txt file</h2>
+            <p>Every line generates a corresponding automaton.</p>
             <div id="file-results" class="file-results"></div>
         </section>
         </main>

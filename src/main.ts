@@ -6,147 +6,121 @@ import { renderDFA, renderNFA } from './drawing';
 import { nfaToDFA } from './5-subsets';
 import { minimizeDFA } from './6-minimization';
 
-const manualView = document.querySelector<HTMLElement>('#manual-view')!;
-const fileView = document.querySelector<HTMLElement>('#file-view')!;
-const manualViewButton = document.querySelector<HTMLButtonElement>('#manual-view-button')!;
-const fileViewButton = document.querySelector<HTMLButtonElement>('#file-view-button')!;
-const form = document.querySelector<HTMLFormElement>('#regex-form')!;
-const input = document.querySelector<HTMLInputElement>('#regex-input')!;
-const formatted = document.querySelector('#formatted-output')!;
-const postfixOutput = document.querySelector('#postfix-output')!;
-const error = document.querySelector('#error-output')!;
-const container = document.querySelector<HTMLElement>('#nfa-container')!;
-const dfaContainer = document.querySelector<HTMLElement>('#dfa-container')!;
-const minimizedDfaContainer = document.querySelector<HTMLElement>('#minimized-dfa-container')!;
-const fileResults = document.querySelector<HTMLElement>('#file-results')!;
+// Selector de elementos del DOM por ID con tipado genérico
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-function showFileView(show: boolean): void {
-    manualView.hidden = show;
-    fileView.hidden = !show;
-    manualViewButton.setAttribute('aria-pressed', String(!show));
-    fileViewButton.setAttribute('aria-pressed', String(show));
+// Procesamiento de la expresión regular: validación, conversión a notación explícita, postfix, NFA, DFA y DFA minimizado
+function processRegex(rawRegex: string) {
+    const regex = rawRegex.trim();
+    if (!regex || !isBalanced(regex)) {
+        throw new Error('Invalid or unbalanced regular expression');
+    }
+
+    const explicit = insertExplicitConcat(regex);
+    const postfix = regexToPostfix(regex);
+    const nfa = postfixToNFA(postfix);
+    const dfa = nfaToDFA(nfa);
+    const minDfa = minimizeDFA(dfa);
+
+    return { regex, explicit, postfix, nfa, dfa, minDfa };
 }
 
-manualViewButton.addEventListener('click', () => showFileView(false));
-fileViewButton.addEventListener('click', () => showFileView(true));
+// Renderizado para NFA, DFA y DFA minimizado en contenedores específicos del DOM
+async function renderGraphs(
+    { nfa, dfa, minDfa }: Pick<ReturnType<typeof processRegex>, 'nfa' | 'dfa' | 'minDfa'>,
+    targets: { nfa: HTMLElement; dfa: HTMLElement; minDfa: HTMLElement }
+) {
+    await renderNFA(nfa, targets.nfa);
+    await renderDFA(dfa, targets.dfa);
+    await renderDFA(minDfa, targets.minDfa);
+}
 
-async function draw(): Promise<void> {
-    error.textContent = '';
+// 3. Pestañas: alternar entre vista manual y vista por archivo
+function setFileView(showFile: boolean): void {
+    $('manual-view').hidden = showFile;
+    $('file-view').hidden = !showFile;
+    $('manual-view-button').setAttribute('aria-pressed', String(!showFile));
+    $('file-view-button').setAttribute('aria-pressed', String(showFile));
+}
+
+$('manual-view-button').onclick = () => setFileView(false);
+$('file-view-button').onclick = () => setFileView(true);
+
+// Vista manual (Infix expression)
+async function drawManual(): Promise<void> {
+    const errorEl = $('error-output');
+    errorEl.textContent = '';
 
     try {
-        const regex = input.value.trim();
+        const input = $('regex-input') as HTMLInputElement;
+        const result = processRegex(input.value);
 
-        if (!regex || !isBalanced(regex)) {
-            throw new Error('La expresión regular no es válida');
-        }
+        $('formatted-output').textContent = result.explicit;
+        $('postfix-output').textContent = result.postfix;
 
-        const explicit = insertExplicitConcat(regex);
-        const postfix = regexToPostfix(regex);
-
-        formatted.textContent = explicit;
-        postfixOutput.textContent = postfix;
-
-        const nfa = postfixToNFA(postfix);
-        await renderNFA(nfa, container);
-
-        const dfa = nfaToDFA(nfa);
-        await renderDFA(dfa, dfaContainer);
-        await renderDFA(minimizeDFA(dfa), minimizedDfaContainer);
-    } catch (cause) {
-        error.textContent =
-            cause instanceof Error ? cause.message : 'No se pudo construir el AFN';
+        await renderGraphs(result, {
+            nfa: $('nfa-container'),
+            dfa: $('dfa-container'),
+            minDfa: $('minimized-dfa-container'),
+        });
+    } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Error constructing automaton';
     }
 }
 
-form.addEventListener('submit', event => {
+$('regex-form').onsubmit = (event) => {
     event.preventDefault();
-    void draw();
-});
+    void drawManual();
+};
 
-void draw();
+void drawManual();
 
-function addDetail(parent: HTMLElement, label: string, value: string): void {
-    const detail = document.createElement('p');
-    detail.textContent = `${label}: ${value}`;
-    parent.append(detail);
-}
-
+// Vista por archivo (Automatons from regex.txt)
 async function drawFileResults(): Promise<void> {
+    const container = $('file-results');
+
     try {
         const response = await fetch('/api/regexes');
         const data = await response.json();
 
         if (!response.ok || !Array.isArray(data)) {
-            throw new Error(Array.isArray(data) ? 'No se pudieron leer los archivos' : data.error);
+            throw new Error(data?.error ?? 'Failed to load file items');
         }
 
-        for (const inputCase of data) {
+        for (const item of data) {
             const card = document.createElement('article');
             card.className = 'case-card';
-            fileResults.append(card);
+            container.append(card);
 
             try {
-                if (!isBalanced(inputCase.regex)) {
-                    throw new Error('paréntesis no balanceados');
-                }
+                const result = processRegex(item.regex);
 
-                const postfix = regexToPostfix(inputCase.regex);
-                const nfa = postfixToNFA(postfix);
-                const dfa = nfaToDFA(nfa);
-                const minimizedDfa = minimizeDFA(dfa);
+                card.innerHTML = `
+                    <h3>Line ${item.line}: <code>${result.regex}</code></h3>
+                    <p><strong>Postfix:</strong> <code>${result.postfix}</code></p>
+                    <p><strong>DFA States:</strong> ${result.dfa.states.length} | <strong>Minimized:</strong> ${result.minDfa.states.length}</p>
+                    
+                    <div class="graphs-wrapper">
+                        <h4>NFA (Thompson)</h4>
+                        <div class="nfa-graph" role="img" aria-label="NFA of ${result.regex}"></div>
 
-                card.innerHTML = `<h3>Línea ${inputCase.line}</h3>`;
-                addDetail(card, 'Regex', inputCase.regex);
-                addDetail(card, 'Postfix', postfix);
-                addDetail(card, 'Estados AFD', String(dfa.states.length));
-                addDetail(card, 'Estados AFD minimizado', String(minimizedDfa.states.length));
+                        <h4>DFA (Subsets)</h4>
+                        <div class="dfa-graph" role="img" aria-label="DFA of ${result.regex}"></div>
 
-                const graphsWrapper = document.createElement('div');
-                graphsWrapper.className = 'graphs-wrapper';
-                card.append(graphsWrapper);
+                        <h4>DFA (Minimized)</h4>
+                        <div class="dfa-graph" role="img" aria-label="Minimized DFA of ${result.regex}"></div>
+                    </div>
+                `;
 
-                const nfaLabel = document.createElement('p');
-                nfaLabel.textContent = 'AFN:';
-                graphsWrapper.append(nfaLabel);
-
-                const nfaGraphContainer = document.createElement('div');
-                nfaGraphContainer.className = 'nfa-graph';
-                nfaGraphContainer.role = 'img';
-                nfaGraphContainer.ariaLabel = `AFN de ${inputCase.regex}`;
-                graphsWrapper.append(nfaGraphContainer);
-                await renderNFA(nfa, nfaGraphContainer);
-
-                const dfaLabel = document.createElement('p');
-                dfaLabel.textContent = 'AFD:';
-                graphsWrapper.append(dfaLabel);
-
-                const dfaGraphContainer = document.createElement('div');
-                dfaGraphContainer.className = 'dfa-graph';
-                dfaGraphContainer.role = 'img';
-                dfaGraphContainer.ariaLabel = `AFD de ${inputCase.regex}`;
-                graphsWrapper.append(dfaGraphContainer);
-                await renderDFA(dfa, dfaGraphContainer);
-
-                const minimizedLabel = document.createElement('p');
-                minimizedLabel.textContent = 'AFD minimizado:';
-                graphsWrapper.append(minimizedLabel);
-
-                const minimizedGraphContainer = document.createElement('div');
-                minimizedGraphContainer.className = 'dfa-graph';
-                minimizedGraphContainer.role = 'img';
-                minimizedGraphContainer.ariaLabel = `AFD minimizado de ${inputCase.regex}`;
-                graphsWrapper.append(minimizedGraphContainer);
-                await renderDFA(minimizedDfa, minimizedGraphContainer);
-            } catch (cause) {
-                const message = cause instanceof Error ? cause.message : 'error desconocido';
-                card.classList.add('invalid');
-                card.textContent = `Línea ${inputCase.line}: error - ${message}`;
+                const [nfaEl, dfaEl, minDfaEl] = card.querySelectorAll<HTMLElement>('.graphs-wrapper > div');
+                await renderGraphs(result, { nfa: nfaEl, dfa: dfaEl, minDfa: minDfaEl });
+            } catch (err) {
+                card.className = 'case-card invalid';
+                card.innerHTML = `<h3>Line ${item.line}</h3><p class="error">Error: ${err instanceof Error ? err.message : 'Unknown'}</p>`;
             }
         }
-    } catch (cause) {
-        fileResults.textContent = cause instanceof Error
-            ? cause.message
-            : 'No se pudieron mostrar los resultados';
+    } catch (err) {
+        container.textContent = err instanceof Error ? err.message : 'Failed to display results';
     }
 }
 
