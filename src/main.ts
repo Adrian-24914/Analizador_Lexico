@@ -3,7 +3,8 @@ import { insertExplicitConcat, regexToPostfix } from './3-shunting-yard';
 import { postfixToNFA } from './4-thompson';
 import { renderDFA, renderNFA } from './drawing';
 import { nfaToDFA } from './5-subsets';
-import { minimizeDFA } from './6-minimization';
+import { minimizeDFA } from './6-partitions';
+import { minimizeDFAWithMyhill } from './6-myhill';
 import { evaluateDFA, evaluateNFA } from './7-simulation';
 import {EPSILON} from './4-thompson';
 
@@ -20,8 +21,9 @@ function processRegex(rawRegex: string) {
     const nfa = postfixToNFA(postfix);
     const dfa = nfaToDFA(nfa);
     const minDfa = minimizeDFA(dfa);
+    const myhillDfa = minimizeDFAWithMyhill(dfa);
 
-    return { regex, explicit, postfix, nfa, dfa, minDfa };
+    return { regex, explicit, postfix, nfa, dfa, minDfa, myhillDfa };
 }
 
 interface SimulationStep {
@@ -81,20 +83,22 @@ function addSimulation(
     };
 }
 
-// Renderiza los tres autómatas y simula la cadena de entrada
+// Renderiza los autómatas y simula la cadena de entrada
 async function renderGraphs(
-    { nfa, dfa, minDfa }: Pick<ReturnType<typeof processRegex>, 'nfa' | 'dfa' | 'minDfa'>,
-    targets: { nfa: HTMLElement; dfa: HTMLElement; minDfa: HTMLElement },
+    { nfa, dfa, minDfa, myhillDfa }: Pick<ReturnType<typeof processRegex>, 'nfa' | 'dfa' | 'minDfa' | 'myhillDfa'>,
+    targets: { nfa: HTMLElement; dfa: HTMLElement; minDfa: HTMLElement; myhillDfa: HTMLElement },
     rawInput: string,
 ) {
     await renderNFA(nfa, targets.nfa);
     await renderDFA(dfa, targets.dfa);
     await renderDFA(minDfa, targets.minDfa);
+    await renderDFA(myhillDfa, targets.myhillDfa);
 
     const input = rawInput === EPSILON ? '' : rawInput;
     const nfaResult = evaluateNFA(nfa, input);
     const dfaResult = evaluateDFA(dfa, input);
     const minDfaResult = evaluateDFA(minDfa, input);
+    const myhillDfaResult = evaluateDFA(myhillDfa, input);
 
     // 1. NFA: estados activos por cada paso
     addSimulation(
@@ -123,6 +127,17 @@ async function renderGraphs(
             ...minDfaResult.steps.map(s => ({ symbol: s.symbol, states: s.to === null ? [] : [s.to] })),
         ],
         minDfaResult.accepted,
+        input,
+    );
+
+    // 4. DFA minimized with Myhill: start + transitions
+    addSimulation(
+        targets.myhillDfa,
+        [
+            { symbol: null, states: [myhillDfa.start.id] },
+            ...myhillDfaResult.steps.map(s => ({ symbol: s.symbol, states: s.to === null ? [] : [s.to] })),
+        ],
+        myhillDfaResult.accepted,
         input,
     );
 }
@@ -159,6 +174,7 @@ async function drawManual(): Promise<void> {
                 nfa: $('nfa-container'),
                 dfa: $('dfa-container'),
                 minDfa: $('minimized-dfa-container'),
+                myhillDfa: $('myhill-dfa-container'),
             },
             ($('string-input') as HTMLInputElement)?.value ?? ''
         );
@@ -208,10 +224,17 @@ async function drawFileResults(): Promise<void> {
 
                     <h3>DFA Minimized (partitioning algorithm)</h3>
                     <div class="dfa-graph" role="img" aria-label="Minimized DFA of ${result.regex}"></div>
+
+                    <h3>DFA Minimized (Myhill theorem)</h3>
+                    <div class="dfa-graph" role="img" aria-label="DFA minimized with Myhill for ${result.regex}"></div>
                 `;
 
-                const [nfaEl, dfaEl, minDfaEl] = card.querySelectorAll<HTMLElement>('.nfa-graph, .dfa-graph');
-                await renderGraphs(result, { nfa: nfaEl, dfa: dfaEl, minDfa: minDfaEl }, item.value);
+                const [nfaEl, dfaEl, minDfaEl, myhillDfaEl] = card.querySelectorAll<HTMLElement>('.nfa-graph, .dfa-graph');
+                await renderGraphs(
+                    result,
+                    { nfa: nfaEl, dfa: dfaEl, minDfa: minDfaEl, myhillDfa: myhillDfaEl },
+                    item.value,
+                );
             } catch (err) {
                 card.className = 'case-card invalid';
                 card.innerHTML = `<p class="error">Line ${item.line}: ${err instanceof Error ? err.message : 'Unknown error'}</p>`;
