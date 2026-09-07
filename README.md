@@ -13,7 +13,7 @@ Actualmente, cada caso pasa por este flujo:
 Una expresión inválida se reporta con su número de línea y no detiene el
 procesamiento de los demás casos.
 
-Los resultados y el grafo de cada AFN se muestran en la página web.
+Los resultados y cada AFN renderizado desde formato DOT se muestran en la página web.
 
 ## Archivos de entrada
 

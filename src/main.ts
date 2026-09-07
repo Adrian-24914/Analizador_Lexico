@@ -1,142 +1,225 @@
 import './styles.css';
-import type { Core } from 'cytoscape';
-import { simulateNFA } from './nfa-simulator';
-import type { InputCase } from './1-reader';
 import { isBalanced } from './2-validator';
 import { insertExplicitConcat, regexToPostfix } from './3-shunting-yard';
 import { postfixToNFA } from './4-thompson';
-import { renderNFA } from './cytoscape';
-import { subsetConstruction, simulateDFA, renderDFA, renderDFALegend } from './5-dfa';
+import { renderDFA, renderNFA } from './drawing';
+import { nfaToDFA } from './5-subsets';
+import { minimizeDFA } from './6-minimization';
+import { evaluateDFA, evaluateNFA } from './7-simulation';
+import {EPSILON} from './4-thompson';
 
-const form = document.querySelector<HTMLFormElement>('#regex-form')!;
-const input = document.querySelector<HTMLInputElement>('#regex-input')!;
-const formatted = document.querySelector('#formatted-output')!;
-const postfixOutput = document.querySelector('#postfix-output')!;
-const error = document.querySelector('#error-output')!;
-const container = document.querySelector<HTMLElement>('#nfa-container')!;
-const dfaContainer = document.querySelector<HTMLElement>('#dfa-container')!;
-const dfaLegend = document.querySelector<HTMLElement>('#dfa-legend')!;
-const fileResults = document.querySelector<HTMLElement>('#file-results')!;
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-let graph: Core | undefined;
-let dfaGraph: Core | undefined;
+function processRegex(rawRegex: string) {
+    const regex = rawRegex.trim();
+    if (!regex || !isBalanced(regex)) {
+        throw new Error('Invalid or unbalanced regular expression');
+    }
 
-function draw(): void {
-    error.textContent = '';
+    const explicit = insertExplicitConcat(regex);
+    const postfix = regexToPostfix(regex);
+    const nfa = postfixToNFA(postfix);
+    const dfa = nfaToDFA(nfa);
+    const minDfa = minimizeDFA(dfa);
 
-    try {
-        const regex = input.value.trim();
+    return { regex, explicit, postfix, nfa, dfa, minDfa };
+}
 
-        if (!regex || !isBalanced(regex)) {
-        throw new Error('La expresión regular no es válida');
+interface SimulationStep {
+    symbol: string | null;
+    states: number[];
+}
+
+// Simulación usando directamente los IDs de los estados 
+// para resaltar los nodos en el SVG generado por Graphviz
+function addSimulation(
+    graph: HTMLElement,
+    steps: SimulationStep[],
+    accepted: boolean,
+    input: string,
+): void {
+    if (graph.nextElementSibling?.classList.contains('simulation-controls')) {
+        graph.nextElementSibling.remove();
+    }
+
+    const controls = document.createElement('div');
+    controls.className = 'simulation-controls';
+    controls.innerHTML = `
+        <button type="button">Simulate step by step</button>
+        <p class="simulation-status" aria-live="polite"></p>
+    `;
+    graph.after(controls);
+
+    const button = controls.querySelector('button')!;
+    const status = controls.querySelector<HTMLElement>('.simulation-status')!;
+    const characters = [...input];
+    let index = -1;
+
+    button.onclick = () => {
+        index = index === steps.length - 1 ? 0 : index + 1;
+        const step = steps[index];
+        const activeIds = new Set(step.states.map(String));
+        const finished = index === steps.length - 1;
+
+        // Resalta el nodo si el <title> del SVG coincide con el id exacto (ej: "0", "1" o "S0")
+        for (const node of graph.querySelectorAll<SVGGElement>('g.node')) {
+            const title = node.querySelector('title')?.textContent?.trim() ?? '';
+            // Coincide con el número directo o si viene con prefijo interno del dot (ej: S1 o D1)
+            const cleanTitle = title.replace(/^[^\d]+/, '');
+            node.classList.toggle('active-state', activeIds.has(title) || activeIds.has(cleanTitle));
         }
 
-        const explicit = insertExplicitConcat(regex);
-        const postfix = regexToPostfix(regex);
+        status.className = `simulation-status${finished ? accepted ? ' accepted' : ' rejected' : ''}`;
+        status.textContent = [
+            `Step ${index}/${characters.length}`,
+            step.symbol === null ? 'Initial state' : `Read "${step.symbol}"`,
+            `Active: [${step.states.join(', ') || EPSILON}]`,
+            `Remaining: ${characters.slice(index).join('') || EPSILON}`,
+            finished ? (accepted ? 'w ∈ L(r)' : 'w ∉ L(r)') : '',
+        ].filter(Boolean).join(' --- ');
+        
+        button.textContent = finished ? 'Restart simulation' : 'Next step';
+    };
+}
 
-        formatted.textContent = explicit;
-        postfixOutput.textContent = postfix;
+// Renderiza los tres autómatas y simula la cadena de entrada
+async function renderGraphs(
+    { nfa, dfa, minDfa }: Pick<ReturnType<typeof processRegex>, 'nfa' | 'dfa' | 'minDfa'>,
+    targets: { nfa: HTMLElement; dfa: HTMLElement; minDfa: HTMLElement },
+    rawInput: string,
+) {
+    await renderNFA(nfa, targets.nfa);
+    await renderDFA(dfa, targets.dfa);
+    await renderDFA(minDfa, targets.minDfa);
 
-        const nfa = postfixToNFA(postfix);
+    const input = rawInput === EPSILON ? '' : rawInput;
+    const nfaResult = evaluateNFA(nfa, input);
+    const dfaResult = evaluateDFA(dfa, input);
+    const minDfaResult = evaluateDFA(minDfa, input);
 
-        graph?.destroy();
-        graph = renderNFA(nfa, container);
+    // 1. NFA: estados activos por cada paso
+    addSimulation(
+        targets.nfa,
+        nfaResult.steps.map(s => ({ symbol: s.symbol, states: s.nextStates })),
+        nfaResult.accepted,
+        input,
+    );
 
-        dfaGraph?.destroy();
-        const dfa = subsetConstruction(nfa);
-        dfaGraph = renderDFA(dfa, dfaContainer);
-        renderDFALegend(dfa, dfaLegend);
-    } catch (cause) {
-        error.textContent =
-        cause instanceof Error ? cause.message : 'No se pudo construir el AFN';
+    // 2. DFA: inicio + transiciones
+    addSimulation(
+        targets.dfa,
+        [
+            { symbol: null, states: [dfa.start.id] },
+            ...dfaResult.steps.map(s => ({ symbol: s.symbol, states: s.to === null ? [] : [s.to] })),
+        ],
+        dfaResult.accepted,
+        input,
+    );
+
+    // 3. Minimized DFA: inicio + transiciones
+    addSimulation(
+        targets.minDfa,
+        [
+            { symbol: null, states: [minDfa.start.id] },
+            ...minDfaResult.steps.map(s => ({ symbol: s.symbol, states: s.to === null ? [] : [s.to] })),
+        ],
+        minDfaResult.accepted,
+        input,
+    );
+}
+
+// Control de vistas
+function setFileView(showFile: boolean): void {
+    $('manual-view').hidden = showFile;
+    $('file-view').hidden = !showFile;
+    $('manual-view-button').setAttribute('aria-pressed', String(!showFile));
+    $('file-view-button').setAttribute('aria-pressed', String(showFile));
+}
+
+$('manual-view-button').onclick = () => setFileView(false);
+$('file-view-button').onclick = () => setFileView(true);
+
+// Vista manual
+async function drawManual(): Promise<void> {
+    const errorEl = $('error-output');
+    errorEl.textContent = '';
+
+    const input = $('regex-input') as HTMLInputElement;
+    const value = input.value.trim();
+    if (!value) return;
+
+    try {
+        const result = processRegex(value);
+
+        $('formatted-output').textContent = result.explicit;
+        $('postfix-output').textContent = result.postfix;
+
+        await renderGraphs(
+            result,
+            {
+                nfa: $('nfa-container'),
+                dfa: $('dfa-container'),
+                minDfa: $('minimized-dfa-container'),
+            },
+            ($('string-input') as HTMLInputElement)?.value ?? ''
+        );
+    } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Error constructing automaton';
     }
 }
 
-form.addEventListener('submit', event => {
+
+$('regex-form').onsubmit = (event) => {
     event.preventDefault();
-    draw();
-});
+    void drawManual();
+};
 
-draw();
+void drawManual();
 
-function addDetail(parent: HTMLElement, label: string, value: string): void {
-    const detail = document.createElement('p');
-    detail.textContent = `${label}: ${value}`;
-    parent.append(detail);
-}
-
+// Vista por archivo
 async function drawFileResults(): Promise<void> {
+    const container = $('file-results');
+
     try {
         const response = await fetch('/api/inputs');
-        const data = await response.json() as InputCase[] | { error: string };
+        const data = await response.json();
 
         if (!response.ok || !Array.isArray(data)) {
-            throw new Error(Array.isArray(data) ? 'No se pudieron leer los archivos' : data.error);
+            throw new Error(data?.error ?? 'Failed to load file items');
         }
 
-        for (const inputCase of data) {
+        for (const item of data) {
             const card = document.createElement('article');
             card.className = 'case-card';
-            fileResults.append(card);
+            container.append(card);
 
             try {
-                if (!isBalanced(inputCase.regex)) {
-                    throw new Error('paréntesis no balanceados');
-                }
+                const result = processRegex(item.regex);
 
-                const postfix = regexToPostfix(inputCase.regex);
-                const nfa = postfixToNFA(postfix);
-                const dfa = subsetConstruction(nfa);
-                const value = inputCase.value === 'ε' ? '' : inputCase.value;
-                const accepted = simulateNFA(nfa, value);
-                const acceptedDFA = simulateDFA(dfa, value);
+                card.innerHTML = `
+                    <h2 class="case-title">Infix Regular Expression: <code>${result.regex}</code></h2>
+                    <h2 class="case-title">Postfix expression: <code>${result.postfix}</code></h2>
+                    <h2 class="case-title">String to evaluate: <code>${item.value}</code></h2>
 
-                card.classList.add(accepted ? 'accepted' : 'rejected');
-                card.innerHTML = `<h3>Línea ${inputCase.line}: ${accepted ? 'sí' : 'no'}</h3>`;
-                addDetail(card, 'Regex', inputCase.regex);
-                addDetail(card, 'Cadena', inputCase.value || 'ε');
-                addDetail(card, 'Postfix', postfix);
-                addDetail(card, 'Estados AFD', String(dfa.states.length));
+                    <h3>NFA (Thompson algorithm)</h3>
+                    <div class="nfa-graph" role="img" aria-label="NFA of ${result.regex}"></div>
 
-                if (acceptedDFA !== accepted) {
-                    addDetail(card, 'Advertencia', 'el AFD no coincide con el AFN');
-                }
+                    <h3>DFA (subset construction algorithm)</h3>
+                    <div class="dfa-graph" role="img" aria-label="DFA of ${result.regex}"></div>
 
-                const graphsWrapper = document.createElement('div');
-                graphsWrapper.className = 'graphs-wrapper';
-                card.append(graphsWrapper);
+                    <h3>DFA Minimized (partitioning algorithm)</h3>
+                    <div class="dfa-graph" role="img" aria-label="Minimized DFA of ${result.regex}"></div>
+                `;
 
-                const nfaLabel = document.createElement('p');
-                nfaLabel.textContent = 'AFN:';
-                graphsWrapper.append(nfaLabel);
-
-                const graphContainer = document.createElement('div');
-                graphContainer.className = 'nfa-graph';
-                graphsWrapper.append(graphContainer);
-                renderNFA(nfa, graphContainer);
-
-                const dfaLabel = document.createElement('p');
-                dfaLabel.textContent = 'AFD:';
-                graphsWrapper.append(dfaLabel);
-
-                const dfaGraphContainer = document.createElement('div');
-                dfaGraphContainer.className = 'nfa-graph';
-                graphsWrapper.append(dfaGraphContainer);
-                renderDFA(dfa, dfaGraphContainer);
-
-                const dfaLegendContainer = document.createElement('div');
-                graphsWrapper.append(dfaLegendContainer);
-                renderDFALegend(dfa, dfaLegendContainer);
-            } catch (cause) {
-                const message = cause instanceof Error ? cause.message : 'error desconocido';
-                card.classList.add('invalid');
-                card.textContent = `Línea ${inputCase.line}: error - ${message}`;
+                const [nfaEl, dfaEl, minDfaEl] = card.querySelectorAll<HTMLElement>('.nfa-graph, .dfa-graph');
+                await renderGraphs(result, { nfa: nfaEl, dfa: dfaEl, minDfa: minDfaEl }, item.value);
+            } catch (err) {
+                card.className = 'case-card invalid';
+                card.innerHTML = `<p class="error">Line ${item.line}: ${err instanceof Error ? err.message : 'Unknown error'}</p>`;
             }
         }
-    } catch (cause) {
-        fileResults.textContent = cause instanceof Error
-            ? cause.message
-            : 'No se pudieron mostrar los resultados';
+    } catch (err) {
+        container.textContent = err instanceof Error ? err.message : 'Failed to display results';
     }
 }
 

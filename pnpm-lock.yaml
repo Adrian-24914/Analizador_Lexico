@@ -207,9 +207,9 @@ importers:
 
   .:
     dependencies:
-      cytoscape:
-        specifier: ^3.34.1
-        version: 3.34.1
+      '@viz-js/viz':
+        specifier: ^3.30.0
+        version: 3.30.0
     devDependencies:
       '@types/node':
         specifier: ^26.2.0
@@ -607,9 +607,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  cytoscape@3.34.1:
-    resolution: {integrity: sha512-Lr0RvH9H75y9ar8h9Toy6u4lxRSCcxUq+hHcQ26sVWo6BnaQp1gwEZOYqwuYTZhyW7npyKnNLP8oJ2p1/3OZ7g==}
-    engines: {node: '>=0.10'}
+  '@viz-js/viz@3.30.0':
+    resolution: {integrity: sha512-2zmcP55QY44uQfZ+GvgNHmGd8S6KUD+2eMur9AbYybSzrOd/m8nMUg0ZircJNiJRKGgVBKAE8kh0hAwpUFUFQQ==}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -986,7 +985,7 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  cytoscape@3.34.1: {}
+  '@viz-js/viz@3.30.0': {}
 
   detect-libc@2.1.2: {}
 

@@ -17,3 +17,4 @@ export function isBalanced(regex: string): boolean {
 
     return stack.length === 0;
 }
+
