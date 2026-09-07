@@ -1,4 +1,3 @@
-import './styles.css';
 import { isBalanced } from './2-validator';
 import { insertExplicitConcat, regexToPostfix } from './3-shunting-yard';
 import { postfixToNFA } from './4-thompson';
