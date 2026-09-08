@@ -1,3 +1,5 @@
+import { tokenizeRegex } from './2-validator'
+
 export const EPSILON = '☻'
 
 // Represetación de la transicion 
@@ -67,7 +69,7 @@ export function postfixToNFA(postfix: string): NFA {
         return fragment;
     }
 
-    for (const token of postfix) {
+    for (const token of tokenizeRegex(postfix)) {
         switch (token) {
         case '.': {
             const right = popFragment()
@@ -150,7 +152,7 @@ export function postfixToNFA(postfix: string): NFA {
             const start = createState()
             const accept = createState()
 
-            addTransition(start, accept, token)
+            addTransition(start, accept, token.startsWith('\\') ? token[1]! : token)
 
             fragments.push({ start, accept })
         }

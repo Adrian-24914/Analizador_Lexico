@@ -1,3 +1,5 @@
+import { tokenizeRegex } from './2-validator';
+
 const PRECEDENCE: Record<string, number> = {
     '*': 3,
     '+': 3,
@@ -12,7 +14,19 @@ const OPERATORS = new Set(['*', '+', '?', '.', '|']);
  * Inserta el operador explícito '.' donde exista una concatenación implícita.
  */
 export function insertExplicitConcat(regex: string): string {
-    return regex.replace(/([^|(])(?=[^|)*+?])/g, '$1.');
+    const tokens = tokenizeRegex(regex);
+    const result: string[] = [];
+
+    for (const [index, token] of tokens.entries()) {
+        const next = tokens[index + 1];
+        result.push(token);
+
+        if (next && token !== '|' && token !== '(' && !['|', ')', '*', '+', '?'].includes(next)) {
+            result.push('.');
+        }
+    }
+
+    return result.join('');
 }
 
 /**
@@ -22,7 +36,7 @@ export function regexToPostfix(regex: string): string {
     const output: string[] = [];
     const stack: string[] = [];
 
-    for (const token of insertExplicitConcat(regex)) {
+    for (const token of tokenizeRegex(insertExplicitConcat(regex))) {
 
         // Si es un operando
         if (!OPERATORS.has(token) && token !== '(' && token !== ')') {

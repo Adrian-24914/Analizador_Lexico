@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { isBalanced } from '../src/2-validator'
 import { evaluateDFA, evaluateNFA } from '../src/7-simulation'
 import { regexToPostfix } from '../src/3-shunting-yard'
 import { postfixToNFA } from '../src/4-thompson'
@@ -20,6 +21,14 @@ describe('simulación del AFN', () => {
 
     it('acepta la cadena vacía cuando la expresión lo permite', () => {
         assert.equal(accepts('a*', ''), true)
+    })
+
+    it('considera los operadores escapados como operandos', () => {
+        const regex = String.raw`\(\)\*\+\?\.\|`
+
+        assert.equal(isBalanced(regex), true)
+        assert.equal(accepts(regex, '()*+?.|'), true)
+        assert.equal(accepts(regex, '()*+?.'), false)
     })
 
     it('registra cada paso del AFN y del AFD', () => {
